@@ -1,23 +1,26 @@
 package com.company;
 
-import java.io.BufferedInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.nio.channels.Channels;
-import java.nio.channels.FileChannel;
-import java.nio.channels.ReadableByteChannel;
+import java.io.*;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 
 public class Main {
 
     public static void main(String[] args) {
-        String url = convertUrl(args[0]);
-        downloadFile(url);
+        String url = null;
+        try {
+            url = convertUrl(args[0]);
+        } catch (Exception ex) {
+            System.out.println(ex.toString());
+            System.exit(-1);
+        }
+
+        File zipFile = downloadZipFile(url);
+        unzipFiles(zipFile);
+
     }
 
-    //TODO Handle exceptions
-    public static String convertUrl(String url) {
+    public static String convertUrl(String url) throws Exception {
         int counter = 0;
         int idStartIndex = 0;
 
@@ -36,7 +39,8 @@ public class Main {
                 }
             }
         }
-        return "bad string";
+
+        throw new Exception("Bad url");
     }
 
     public static String buildNewUrl(String url, String id) {
@@ -49,21 +53,71 @@ public class Main {
         return urlBuilder.toString();
     }
 
-    public static void downloadFile(String urlString) {
+    public static File downloadZipFile(String urlString) {
+//        try {
+//            URL website = new URL(urlString);
+//            ReadableByteChannel rbc = Channels.newChannel(website.openStream());
+//            FileOutputStream fos = new FileOutputStream("output.zip");
+//            fos.getChannel().transferFrom(rbc, 0, Long.MAX_VALUE);
+
+        File zipFile = new File("output.zip");
+        System.out.println(zipFile.getName());
+        return zipFile;
+
+//        } catch (MalformedURLException ex) {
+//            System.out.println("Malformed url: " + ex.toString());
+//            System.exit(-1);
+//        } catch (IOException ex) {
+//            System.out.println(ex.toString());
+//            System.exit(-1);
+//        }
+    }
+
+    public static void unzipFiles(File zipFile) {
         try {
-            URL website = new URL(urlString);
-            ReadableByteChannel rbc = Channels.newChannel(website.openStream());
-            FileOutputStream fos = new FileOutputStream("output.zip");
-            fos.getChannel().transferFrom(rbc, 0, Long.MAX_VALUE);
+            ZipInputStream zis = new ZipInputStream(new FileInputStream(zipFile));
 
-        } catch (MalformedURLException ex) {
-            System.out.println("Bad url: " + ex.toString());
-            System.exit(-1);
+            ZipEntry zipEntry = zis.getNextEntry();
+            String fileName = null;
+            byte[] buffer = new byte[1024];
+            while (zipEntry != null) {
 
-        } catch (IOException ex) {
-            System.out.println(ex.toString());
-            System.exit(-1);
+
+                if (zipEntry.getName().contains(".flv")) {
+                    if (zipEntry.getName().contains("screenshare")) {
+                        fileName = "video.flv";
+                    } else if (zipEntry.getName().contains("cameraVoip")) {
+                        fileName = "audio.flv";
+                    }
+                } else {
+                    fileName = null;
+                }
+
+                if (fileName != null) {
+                    File newFile = new File(fileName);
+                    FileOutputStream fos = new FileOutputStream(newFile);
+                    int lenght;
+                    while ((lenght = zis.read(buffer)) > 0) {
+                        fos.write(buffer, 0, lenght);
+                    }
+                    fos.close();
+                }
+
+                zipEntry = zis.getNextEntry();
+
+
+            }
+            zis.closeEntry();
+            zis.close();
+
+        } catch (
+                FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (
+                IOException e) {
+            e.printStackTrace();
         }
     }
+
 
 }
